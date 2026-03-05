@@ -1,1 +1,431 @@
-hello
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>数钥智评 Pro - 多智能体动态风险评估平台</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --primary: #00f2fe;
+            --secondary: #4facfe;
+            --dark-bg: #06090f;
+            --glass: rgba(255, 255, 255, 0.05);
+            --glass-border: rgba(255, 255, 255, 0.1);
+        }
+
+        body {
+            background-color: var(--dark-bg);
+            color: #e0e6ed;
+            font-family: 'Segoe UI', Roboto, sans-serif;
+            overflow-x: hidden;
+            height: 100vh;
+        }
+
+        /* 隐藏滚动条但保留功能 */
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-thumb { background: var(--secondary); border-radius: 10px; }
+
+        /* 全局背景动画 */
+        #bg-canvas {
+            position: fixed;
+            top: 0; left: 0; z-index: -1;
+            width: 100%; height: 100%;
+            background: radial-gradient(circle at 50% 50%, #1a2a44 0%, #06090f 100%);
+        }
+
+        /* 侧边导航栏 */
+        .sidebar {
+            width: 260px;
+            height: 100vh;
+            position: fixed;
+            background: rgba(10, 15, 25, 0.8);
+            backdrop-filter: blur(20px);
+            border-right: 1px solid var(--glass-border);
+            padding: 20px;
+            z-index: 100;
+        }
+
+        .nav-item {
+            padding: 12px 20px;
+            margin-bottom: 10px;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: 0.3s;
+            display: flex;
+            align-items: center;
+            color: #94a3b8;
+            text-decoration: none;
+        }
+
+        .nav-item:hover, .nav-item.active {
+            background: var(--glass);
+            color: var(--primary);
+            box-shadow: inset 0 0 10px rgba(0, 242, 254, 0.1);
+        }
+
+        .nav-item i { margin-right: 15px; width: 20px; }
+
+        /* 主体内容区 */
+        .main-content {
+            margin-left: 260px;
+            padding: 30px;
+            transition: 0.5s;
+        }
+
+        .page-section { display: none; animation: fadeIn 0.5s ease; }
+        .page-section.active { display: block; }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* 玻璃态卡片 */
+        .card-custom {
+            background: var(--glass);
+            border: 1px solid var(--glass-border);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 25px;
+            margin-bottom: 25px;
+            transition: 0.3s;
+        }
+
+        .card-custom:hover {
+            border-color: var(--primary);
+            transform: translateY(-5px);
+        }
+
+        /* Agent 节点球体效果 */
+        .agent-node {
+            width: 100%;
+            height: 150px;
+            border-radius: 15px;
+            background: linear-gradient(135deg, rgba(0, 242, 254, 0.1), rgba(79, 172, 254, 0.1));
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            border: 1px solid var(--glass-border);
+            transition: 0.3s;
+        }
+
+        .agent-node:hover {
+            background: rgba(0, 242, 254, 0.2);
+            transform: scale(1.05);
+        }
+
+        .agent-node i { font-size: 2.5rem; margin-bottom: 10px; color: var(--primary); }
+
+        /* 状态指示灯 */
+        .status-dot {
+            height: 10px; width: 10px;
+            background-color: #22c55e;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 8px;
+            box-shadow: 0 0 10px #22c55e;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.4; } 100% { opacity: 1; } }
+
+        /* 架构步骤点击动画 */
+        .step-box {
+            padding: 15px;
+            margin: 10px 0;
+            background: rgba(255,255,255,0.03);
+            border-left: 4px solid var(--primary);
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+    <canvas id="bg-canvas"></canvas>
+
+    <div class="sidebar">
+        <div class="mb-5 px-3">
+            <h4 class="fw-bold text-white"><i class="fas fa-key text-info"></i> 数钥智评</h4>
+            <small class="text-muted">MARL 数据资产评估原型</small>
+        </div>
+        
+        <div class="nav-item active" onclick="showPage('overview', this)">
+            <i class="fas fa-th-large"></i> 系统总览
+        </div>
+        <div class="nav-item" onclick="showPage('agents', this)">
+            <i class="fas fa-robot"></i> 智能体模拟
+        </div>
+        <div class="nav-item" onclick="showPage('tech-deep', this)">
+            <i class="fas fa-layer-group"></i> 技术架构
+        </div>
+        <div class="nav-item" onclick="showPage('market-view', this)">
+            <i class="fas fa-chart-pie"></i> 市场与财务
+        </div>
+        <div class="nav-item" onclick="showPage('team-info', this)">
+            <i class="fas fa-user-group"></i> 团队介绍
+        </div>
+        
+        <div style="margin-top: 200px;" class="px-3">
+            <div class="card-custom p-3" style="font-size: 0.8rem; border-style: dashed;">
+                <p class="mb-2"><span class="status-dot"></span> PPO训练环境：就绪</p>
+                <p class="mb-0"><span class="status-dot"></span> 数据同步：1.2 GB/s</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="main-content">
+        
+        <div id="overview" class="page-section active">
+            <h2 class="mb-4">数据资产动态实时监控</h2>
+            <div class="row">
+                <div class="col-md-8">
+                    <div class="card-custom">
+                        <h5>动态估值曲线 (Vt = V0 × βRL)</h5>
+                        <canvas id="valueChart" height="150"></canvas>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card-custom text-center">
+                        <p class="text-muted">当前基准估值 V0</p>
+                        <h2 class="text-info">￥4,520,000</h2>
+                        <hr>
+                        <p class="text-muted">动态调整系数 βRL</p>
+                        <h2 class="text-warning">0.92</h2>
+                        <button class="btn btn-outline-info w-100 mt-3" onclick="alert('正在调取校友脱敏数据进行回测...')">执行静态估值回测</button>
+                    </div>
+                </div>
+            </div>
+            <div class="row mt-4">
+                <div class="col-md-4">
+                    <div class="card-custom">
+                        <i class="fas fa-shield-alt text-primary mb-3"></i>
+                        <h6>合规审查分数</h6>
+                        <h3>98.5 <small style="font-size: 0.8rem;">/ 100</small></h3>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card-custom">
+                        <i class="fas fa-biohazard text-danger mb-3"></i>
+                        <h6>实时 VaR 风险预警</h6>
+                        <h3 class="text-danger">中风险</h3>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card-custom">
+                        <i class="fas fa-network-wired text-success mb-3"></i>
+                        <h6>智能体交互活跃度</h6>
+                        <h3>4,291 <small style="font-size: 0.8rem;">msg/s</small></h3>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="agents" class="page-section">
+            <h2 class="mb-4">多智能体环境 (PettingZoo & RLlib)</h2>
+            <div class="row mb-4">
+                <div class="col-md-3">
+                    <div class="agent-node" onclick="updateAgentDetail('监管者', '观察合规指标、黑客行为、公众舆论。动作：{不检查, 常规, 严格}', '发现违规收益 - 检查成本')">
+                        <i class="fas fa-gavel"></i>
+                        <span>监管者</span>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="agent-node" onclick="updateAgentDetail('黑客', '观察资产价值、防护水平。动作：{不攻击, 轻度, 重度}', '攻击收益 - 成本 - 被抓惩罚')">
+                        <i class="fas fa-user-secret"></i>
+                        <span>黑客</span>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="agent-node" onclick="updateAgentDetail('竞争对手', '观察市场份额、资产价格。动作：{维持, 降价, 营销}', '市场份额收益')">
+                        <i class="fas fa-building-columns"></i>
+                        <span>竞争对手</span>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="agent-node" onclick="updateAgentDetail('公众', '观察媒体报道、监管行动。动作：{不关注, 关注, 抵制}', '信任度变化')">
+                        <i class="fas fa-users"></i>
+                        <span>公众</span>
+                    </div>
+                </div>
+            </div>
+            <div class="card-custom">
+                <h5 id="agent-title">点击上方智能体查看策略详情</h5>
+                <div id="agent-content" class="text-muted mt-3">
+                    请选择一个智能体以显示其在 MARL 环境中的观察空间 (Observation Space) 和动作空间 (Action Space)。
+                </div>
+                <div class="mt-4" id="agent-graph-placeholder" style="height: 100px; border: 1px dashed #444; border-radius: 10px; display: flex; align-items: center; justify-content: center;">
+                    策略奖励收敛曲线 (PPO Reward Curve) 将在此生成
+                </div>
+            </div>
+        </div>
+
+        <div id="tech-deep" class="page-section">
+            <h2 class="mb-4">三核驱动技术栈</h2>
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="step-box" onclick="alert('成本法 + 收益法 (DCF模型) 加权平均计算基础价值 V0')">
+                        <h5>1. 静态估值层</h5>
+                        <p class="small text-muted">内置《数据安全法》知识库，进行合规性初筛。</p>
+                    </div>
+                    <div class="step-box" onclick="alert('基于社会学理论和历史案例，运行多轮模拟。')">
+                        <h5>2. 多智能体社会模拟层</h5>
+                        <p class="small text-muted">构建模拟 12 个月的风险演化闭环。</p>
+                    </div>
+                    <div class="step-box" onclick="alert('使用 RLlib 的 PPO 算法，训练智能体实现策略涌现。')">
+                        <h5>3. 强化学习动态优化层</h5>
+                        <p class="small text-muted">计算 β 调整系数，实现动态估值 Vt。</p>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card-custom">
+                        <h5>技术底座</h5>
+                        <ul class="mt-3">
+                            <li><strong>框架：</strong> Stable-Baselines3, RLlib</li>
+                            <li><strong>环境：</strong> PettingZoo (Gymnasium)</li>
+                            <li><strong>UI层：</strong> Streamlit + FastAPI</li>
+                            <li><strong>推理：</strong> Ollama (Qwen2.5) [可选]</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="market-view" class="page-section">
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="card-custom">
+                        <h4>市场前景</h4>
+                        <p>目标客户包括 10万+ 科技企业及 5000+ 投资机构。</p>
+                        <table class="table table-dark table-hover mt-3" style="font-size: 0.8rem;">
+                            <thead><tr><th>收入项</th><th>第一年</th><th>第三年</th></tr></thead>
+                            <tbody>
+                                <tr><td>SaaS订阅</td><td>30万</td><td>450万</td></tr>
+                                <tr><td>风险模拟</td><td>20万</td><td>700万</td></tr>
+                                <tr><td>撮合佣金</td><td>0万</td><td>200万</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card-custom">
+                        <h4>融资计划</h4>
+                        <div class="text-center py-4">
+                            <h3 class="text-info">￥300,000,000</h3>
+                            <p>首轮融资 (10% 股权)</p>
+                            <div class="progress mt-3" style="height: 10px; background: #222;">
+                                <div class="progress-bar bg-info" style="width: 50%"></div>
+                            </div>
+                            <p class="small text-muted mt-2">50% 用于研发 | 30% 市场推广</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="team-info" class="page-section">
+            <h2 class="mb-4">东北财经大学 · 数钥智评团队</h2>
+            <div class="row">
+                <div class="col-md-3">
+                    <div class="card-custom text-center">
+                        <div class="rounded-circle bg-secondary mx-auto mb-3" style="width: 60px; height:60px; line-height:60px">张</div>
+                        <h6>张瀚文</h6>
+                        <p class="small text-muted">金融科技 · 负责人</p>
+                    </div>
+                </div>
+                <div class="col-md-9">
+                    <div class="card-custom">
+                        <h5>校友先行冷启动策略</h5>
+                        <p>利用东财校友网络，获取首批 3-5 家企业脱敏数据案例。通过校友引荐促成银行、投资机构首批付费服务。</p>
+                        <div class="mt-3">
+                            <span class="badge bg-primary">金融</span>
+                            <span class="badge bg-info">会计</span>
+                            <span class="badge bg-success">计算机</span>
+                            <span class="badge bg-warning text-dark">社会学</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // 页面切换逻辑
+        function showPage(pageId, element) {
+            document.querySelectorAll('.page-section').forEach(s => s.classList.remove('active'));
+            document.getElementById(pageId).classList.add('active');
+            
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            element.classList.add('active');
+        }
+
+        // Agent 详情更新逻辑
+        function updateAgentDetail(name, obs, reward) {
+            document.getElementById('agent-title').innerText = name + " 智能体详情";
+            document.getElementById('agent-content').innerHTML = `
+                <div class='mb-2'><strong>动作空间：</strong> ${obs}</div>
+                <div><strong>奖励函数：</strong> <code class='text-info'>${reward}</code></div>
+                <div class='mt-3 alert alert-info bg-dark text-info border-info small'>
+                    该智能体正在通过 PPO 算法进行自博弈，以探索在不同政策环境下的最优博弈策略。
+                </div>
+            `;
+            document.getElementById('agent-graph-placeholder').innerHTML = `<i class='fas fa-chart-line fa-2x me-2'></i> 正在实时调取训练日志 (rllib_logs/ppo_v1.csv)...`;
+        }
+
+        // 模拟图表
+        const ctx = document.getElementById('valueChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'],
+                datasets: [{
+                    label: '动态估值 Vt (百万)',
+                    data: [4.5, 4.3, 4.8, 4.2, 3.9, 4.1, 4.6, 4.52, 4.7, 4.8, 4.5, 4.52],
+                    borderColor: '#00f2fe',
+                    tension: 0.4,
+                    fill: true,
+                    backgroundColor: 'rgba(0, 242, 254, 0.1)'
+                }]
+            },
+            options: {
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: { grid: { color: '#222' }, ticks: { color: '#888' } },
+                    x: { grid: { color: '#222' }, ticks: { color: '#888' } }
+                }
+            }
+        });
+
+        // 简单的背景 Canvas 效果 (模拟数据点)
+        const canvas = document.getElementById('bg-canvas');
+        const c = canvas.getContext('2d');
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        
+        let particles = [];
+        for(let i=0; i<50; i++) {
+            particles.push({
+                x: Math.random() * canvas.width,
+                y: Math.random() * canvas.height,
+                v: Math.random() * 0.5 + 0.2
+            });
+        }
+
+        function animate() {
+            c.clearRect(0, 0, canvas.width, canvas.height);
+            c.fillStyle = "rgba(0, 242, 254, 0.2)";
+            particles.forEach(p => {
+                p.y -= p.v;
+                if(p.y < 0) p.y = canvas.height;
+                c.beginPath();
+                c.arc(p.x, p.y, 1, 0, Math.PI*2);
+                c.fill();
+            });
+            requestAnimationFrame(animate);
+        }
+        animate();
+    </script>
+</body>
+</html>
