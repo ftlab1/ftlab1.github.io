@@ -3,260 +3,466 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>数钥智评 - 多智能体强化学习数据资产风险评估平台</title>
+    <title>数钥智评 —— 专家级数据资产评估平台</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;500;700&display=swap');
-        body {
-            background-color: #050505;
-            color: #e0e0e0;
-            font-family: 'Space+Grotesk', sans-serif;
-            overflow-x: hidden;
-        }
-        .glass-card {
-            background: rgba(255, 255, 255, 0.03);
-            backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 1rem;
-            transition: all 0.3s ease;
-        }
-        .glass-card:hover {
-            border-color: #3b82f6;
-            box-shadow: 0 0 20px rgba(59, 130, 246, 0.2);
-        }
-        .gradient-text {
-            background: linear-gradient(90deg, #3b82f6, #8b5cf6, #ec4899);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-        .agent-pulse {
-            position: relative;
-        }
-        .agent-pulse::after {
-            content: '';
-            position: absolute;
-            top: -4px; left: -4px; right: -4px; bottom: -4px;
-            border-radius: 50%;
-            border: 2px solid currentColor;
-            animation: pulse 2s infinite;
-            opacity: 0;
-        }
-        @keyframes pulse {
-            0% { transform: scale(1); opacity: 0.8; }
-            100% { transform: scale(1.5); opacity: 0; }
-        }
+        :root { --primary: #2563eb; --expert-accent: #8b5cf6; }
+        body { font-family: 'Inter', "Microsoft YaHei", sans-serif; background: #f1f5f9; }
+        .sidebar-active { background: #eff6ff; color: var(--primary); border-right: 4px solid var(--primary); }
+        .glass { background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(10px); }
+        .chat-bubble-ai { border-radius: 4px 16px 16px 16px; background: white; border: 1px solid #e2e8f0; }
+        .chat-bubble-user { border-radius: 16px 16px 4px 16px; background: var(--primary); color: white; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
     </style>
 </head>
-<body>
-    <div id="app" class="min-h-screen p-4 md:p-8">
-        <header class="max-w-7xl mx-auto mb-12 flex flex-col md:flex-row justify-between items-center">
-            <div class="animate__animated animate__fadeInLeft">
-                <h1 class="text-4xl font-bold gradient-text mb-2">数钥智评 (DataKey Eval)</h1>
-                <p class="text-gray-400">基于 MARL 的数据资产动态风险评估平台 · 挑战杯参赛项目</p>
-            </div>
-            <div class="mt-4 md:mt-0 flex gap-4">
-                <div class="px-4 py-2 glass-card text-sm">训练迭代: <span class="text-blue-400 font-mono">Iter 4,209</span></div>
-                <div class="px-4 py-2 glass-card text-sm">系统状态: <span class="text-green-400 font-mono">运行中</span></div>
-            </div>
-        </header>
+<body class="h-screen overflow-hidden">
 
-        <main class="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6">
-            
-            <div class="space-y-6 animate__animated animate__fadeInUp" style="animation-delay: 0.1s">
-                <div class="glass-card p-6">
-                    <h3 class="text-lg font-semibold mb-4 flex items-center gap-2">
-                        <span class="w-2 h-2 bg-blue-500 rounded-full"></span> 环境状态 (8-Dim State)
-                    </h3>
-                    <div class="space-y-4">
-                        <div v-for="(val, key) in stateVector" :key="key">
-                            <div class="flex justify-between text-xs mb-1">
-                                <span class="text-gray-400">{{ key }}</span>
-                                <span class="font-mono text-blue-300">{{ val }}%</span>
-                            </div>
-                            <div class="w-full bg-gray-800 h-1.5 rounded-full overflow-hidden">
-                                <div class="bg-blue-500 h-full transition-all duration-1000" :style="{width: val + '%'}"></div>
-                            </div>
-                        </div>
-                    </div>
+<div id="app" class="flex flex-col h-full">
+    <nav class="h-16 glass border-b px-6 flex justify-between items-center z-50">
+        <div class="flex items-center space-x-3 cursor-pointer" onclick="location.reload()">
+            <div class="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center text-white font-bold text-xl shadow-lg">数</div>
+            <span class="text-xl font-black text-slate-800 tracking-tighter">数钥智评 <span class="text-blue-600 text-xs font-normal ml-1">v0.2 Enterprise</span></span>
+        </div>
+        <div class="flex items-center space-x-6">
+            <div id="status-tag" class="hidden px-3 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-500">未登录模式</div>
+            <button id="main-action-btn" onclick="openLogin()" class="bg-blue-600 text-white px-5 py-2 rounded-xl text-sm font-bold shadow-md hover:bg-blue-700 transition">立即登录</button>
+        </div>
+    </nav>
+
+    <div class="flex flex-1 overflow-hidden">
+        <aside id="sidebar" class="hidden w-64 bg-white border-r flex flex-col transition-all duration-300">
+            <div id="sidebar-content" class="flex-1 p-4 space-y-1 overflow-y-auto no-scrollbar">
                 </div>
-
-                <div class="glass-card p-6 border-l-4 border-l-pink-500">
-                    <h3 class="text-lg font-semibold mb-2">核心奖励函数</h3>
-                    <p class="text-xs text-gray-500 mb-4 italic">Reward Logic Optimization [cite: 29]</p>
-                    <div class="bg-black/40 p-3 rounded font-mono text-xs text-pink-400">
-                        R_hacker = gain - cost - penalty<br>
-                        P_caught = base + 0.2*reg + 0.1*pub
+            <div class="p-6 border-t bg-slate-50">
+                <div class="flex items-center space-x-3">
+                    <div id="avatar-box" class="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold">U</div>
+                    <div class="overflow-hidden">
+                        <p id="profile-name" class="font-bold text-sm text-slate-800 truncate">访客</p>
+                        <p id="profile-role" class="text-[10px] text-slate-400">标准版权限</p>
                     </div>
                 </div>
             </div>
+        </aside>
 
-            <div class="lg:col-span-2 glass-card p-8 relative overflow-hidden animate__animated animate__fadeIn">
-                <h3 class="text-xl font-bold mb-8">多智能体博弈空间 (ParallelEnv)</h3>
-                
-                <div class="grid grid-cols-2 gap-12 relative z-10">
-                    <div class="flex flex-col items-center p-4 rounded-xl transition-all" :class="activeAgent === 0 ? 'bg-red-500/10 scale-105' : ''">
-                        <div class="w-16 h-16 rounded-full bg-red-500 flex items-center justify-center mb-3 agent-pulse text-white shadow-lg shadow-red-500/20">
-                            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z"></path></svg>
-                        </div>
-                        <span class="font-bold">黑客 (Hacker)</span>
-                        <span class="text-[10px] text-gray-500">Discrete(3)</span>
-                        <div class="mt-2 text-xs text-red-400 font-mono">{{ hackerAction }}</div>
-                    </div>
-
-                    <div class="flex flex-col items-center p-4 rounded-xl transition-all" :class="activeAgent === 1 ? 'bg-blue-500/10 scale-105' : ''">
-                        <div class="w-16 h-16 rounded-full bg-blue-500 flex items-center justify-center mb-3 agent-pulse text-white shadow-lg shadow-blue-500/20">
-                            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"></path></svg>
-                        </div>
-                        <span class="font-bold">监管者 (Regulator)</span>
-                        <span class="text-[10px] text-gray-500">Discrete(3)</span>
-                        <div class="mt-2 text-xs text-blue-400 font-mono">{{ regulatorAction }}</div>
-                    </div>
-
-                    <div class="flex flex-col items-center p-4 rounded-xl transition-all" :class="activeAgent === 2 ? 'bg-green-500/10 scale-105' : ''">
-                        <div class="w-16 h-16 rounded-full bg-green-500 flex items-center justify-center mb-3 agent-pulse text-white shadow-lg shadow-green-500/20">
-                            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z"></path></svg>
-                        </div>
-                        <span class="font-bold">公众 (Public)</span>
-                        <span class="text-[10px] text-gray-500">Discrete(3)</span>
-                        <div class="mt-2 text-xs text-green-400 font-mono">{{ publicAction }}</div>
-                    </div>
-
-                    <div class="flex flex-col items-center p-4 rounded-xl transition-all" :class="activeAgent === 3 ? 'bg-purple-500/10 scale-105' : ''">
-                        <div class="w-16 h-16 rounded-full bg-purple-500 flex items-center justify-center mb-3 agent-pulse text-white shadow-lg shadow-purple-500/20">
-                            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M7.5 21L3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5"></path></svg>
-                        </div>
-                        <span class="font-bold">竞争对手 (Competitor)</span>
-                        <span class="text-[10px] text-gray-500">Discrete(3)</span>
-                        <div class="mt-2 text-xs text-purple-400 font-mono">{{ competitorAction }}</div>
-                    </div>
-                </div>
-
-                <div class="absolute inset-0 flex items-center justify-center opacity-20 pointer-events-none">
-                    <div class="w-64 h-64 border-4 border-dashed border-gray-600 rounded-full animate-spin-slow"></div>
+        <main class="flex-1 relative overflow-y-auto bg-slate-50 p-8">
+            <div id="view-welcome" class="max-w-4xl mx-auto py-20 animate__animated animate__fadeIn">
+                <div class="inline-block px-4 py-1 bg-blue-50 text-blue-600 rounded-full text-xs font-bold mb-6 italic">让数据价值可衡量、可信赖</div>
+                <h1 class="text-6xl font-black text-slate-900 leading-tight mb-8">
+                    数钥智评：<br><span class="text-blue-600 underline decoration-blue-200">极限生存估值</span><br>引领数据资产新合规
+                </h1>
+                <p class="text-xl text-slate-500 mb-10 max-w-2xl leading-relaxed">
+                    不仅是一份估值，更是风控的最后一道防线。我们通过 AI 智能体模拟多方博弈，为您计算出最真实的资产底线。
+                </p>
+                <div class="flex space-x-4">
+                    <button onclick="openLogin()" class="bg-blue-600 text-white px-8 py-4 rounded-2xl font-bold text-lg shadow-xl shadow-blue-200">开始您的资产评估</button>
+                    <button class="bg-white border px-8 py-4 rounded-2xl font-bold text-lg text-slate-600 hover:bg-slate-50 transition">查阅技术白皮书</button>
                 </div>
             </div>
+
+            <div id="dynamic-content" class="hidden animate__animated animate__fadeIn"></div>
         </main>
-
-        <section class="max-w-7xl mx-auto mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div class="glass-card p-6">
-                <h3 class="text-sm font-semibold mb-4 text-gray-400 underline decoration-blue-500">PPO 算法训练曲线</h3>
-                <canvas id="rewardChart" height="150"></canvas>
-            </div>
-            <div class="glass-card p-6 overflow-y-auto max-h-[280px]">
-                <h3 class="text-sm font-semibold mb-4 text-gray-400">实时策略训练日志 (RLlib Log)</h3>
-                <div class="font-mono text-[10px] space-y-1">
-                    <div v-for="log in trainingLogs" :key="log.id" class="animate__animated animate__fadeIn">
-                        <span class="text-gray-600">[{{ log.time }}]</span> 
-                        <span class="text-yellow-500"> [Policy_Update]</span> 
-                        {{ log.msg }}
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <footer class="max-w-7xl mx-auto mt-12 text-center text-gray-600 text-sm">
-            <p>© 2026 数钥智评 - 挑战杯参赛项目 | 技术栈：PettingZoo + Ray RLlib + Stable-Baselines3</p>
-        </footer>
     </div>
 
-    <script>
-        const { createApp, ref, onMounted } = Vue;
+    <div id="login-overlay" class="hidden fixed inset-0 z-[100] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-md rounded-3xl p-10 shadow-2xl relative animate__animated animate__zoomIn">
+            <button onclick="closeLogin()" class="absolute top-6 right-6 text-slate-300 hover:text-slate-600 text-xl">✕</button>
+            <div class="text-center mb-10">
+                <h3 class="text-2xl font-black text-slate-800">欢迎回归</h3>
+                <p class="text-slate-500 text-sm mt-2">请选择登录的角色以进入对应的系统</p>
+            </div>
+            <div class="grid grid-cols-2 gap-4 mb-8">
+                <div onclick="selectLogin('user')" id="btn-user-select" class="cursor-pointer group p-6 border-2 border-blue-600 bg-blue-50 rounded-2xl text-center transition">
+                    <div class="text-3xl mb-2">🏢</div>
+                    <div class="font-bold text-blue-600">企业/银行端</div>
+                </div>
+                <div onclick="selectLogin('expert')" id="btn-expert-select" class="cursor-pointer group p-6 border-2 border-slate-100 rounded-2xl text-center hover:bg-slate-50 transition">
+                    <div class="text-3xl mb-2">👨‍🏫</div>
+                    <div class="font-bold text-slate-600">行业专家端</div>
+                </div>
+            </div>
+            <button onclick="executeLogin()" class="w-full bg-blue-600 text-white py-4 rounded-2xl font-bold text-lg shadow-lg hover:bg-blue-700 transition">进入工作台</button>
+        </div>
+    </div>
 
-        createApp({
-            setup() {
-                const stateVector = ref({
-                    "资产价值": 85,
-                    "合规分数": 92,
-                    "防护水平": 78,
-                    "监管压力": 45,
-                    "公众信任": 88,
-                    "攻击成功率": 12,
-                    "被抓概率": 34,
-                    "市场份额": 60
-                });
+    <div id="ai-assistant" class="hidden fixed bottom-6 right-6 w-[420px] h-[650px] bg-white rounded-3xl shadow-2xl border border-blue-100 flex flex-col z-[200] animate__animated animate__slideInUp overflow-hidden">
+        <div class="bg-blue-600 p-5 text-white flex justify-between items-center shadow-md">
+            <div class="flex items-center space-x-3">
+                <div class="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center animate-pulse text-lg">🤖</div>
+                <div>
+                    <p class="font-bold text-sm">AI 资产采集助手</p>
+                    <p class="text-[10px] opacity-70">正在分析您的资产潜力...</p>
+                </div>
+            </div>
+            <button onclick="toggleAi(false)" class="text-xl opacity-60 hover:opacity-100 transition">✕</button>
+        </div>
+        
+        <div class="px-5 py-2 bg-blue-50 border-b border-blue-100 flex justify-between items-center">
+            <span class="text-[10px] text-blue-600 font-bold uppercase tracking-wider">采集进度: <span id="chat-progress-num">1/5</span></span>
+            <div class="w-32 h-1 bg-blue-100 rounded-full overflow-hidden">
+                <div id="chat-progress-bar" class="h-full bg-blue-600 transition-all duration-500" style="width: 20%"></div>
+            </div>
+        </div>
 
-                const hackerAction = ref("IDLE");
-                const regulatorAction = ref("ROUTINE");
-                const publicAction = ref("MONITORING");
-                const competitorAction = ref("STABLE");
-                const activeAgent = ref(0);
-                const trainingLogs = ref([]);
+        <div id="chat-window" class="flex-1 overflow-y-auto p-5 space-y-4 no-scrollbar bg-slate-50/30">
+            <div class="flex items-start space-x-2">
+                <div class="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-xs">A</div>
+                <div class="chat-bubble-ai p-4 text-sm text-slate-700 leading-relaxed shadow-sm max-w-[85%]">
+                    您好！我是您的数据资产评估助手。为了开始<strong>极限生存估值</strong>，请先上传您的资产说明文档（Excel或PDF），或者直接告诉我您的数据资产主要包含哪些内容？
+                </div>
+            </div>
+        </div>
 
-                const updateSimulation = () => {
-                    // 模拟 8 维向量波动 [cite: 13]
-                    for (let key in stateVector.value) {
-                        let change = (Math.random() - 0.5) * 5;
-                        stateVector.value[key] = Math.max(0, Math.min(100, Math.floor(stateVector.value[key] + change)));
-                    }
+        <div class="p-4 bg-white border-t space-y-4">
+            <div id="ai-options" class="flex flex-wrap gap-2">
+                <label class="px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-bold cursor-pointer hover:scale-105 transition shadow-sm">
+                    📎 上传资产文件
+                    <input type="file" class="hidden" onchange="handleFileSubmit(event)">
+                </label>
+                <button onclick="sendUserMessage('仅手动录入', 1)" class="px-4 py-2 bg-slate-100 text-slate-600 rounded-xl text-xs font-bold hover:bg-slate-200 transition">手动录入</button>
+            </div>
+            <div class="flex space-x-2">
+                <input id="chat-input" type="text" placeholder="回复AI助手..." class="flex-1 px-4 py-3 bg-slate-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                <button onclick="handleTextSubmit()" class="w-12 h-12 bg-blue-600 text-white rounded-xl flex items-center justify-center font-bold">↑</button>
+            </div>
+        </div>
+    </div>
+</div>
 
-                    // 模拟智能体决策 [cite: 20, 21, 22, 23]
-                    const actions = ["轻度攻击", "重度攻击", "不攻击", "常规检查", "降价竞争", "品牌营销"];
-                    hackerAction.value = actions[Math.floor(Math.random() * 3)];
-                    regulatorAction.value = ["无", "常规", "严格"][Math.floor(Math.random() * 3)];
-                    activeAgent.value = (activeAgent.value + 1) % 4;
+<script>
+    let currentRole = 'user'; 
+    let step = 1;
 
-                    // 增加日志
-                    const now = new Date().toLocaleTimeString();
-                    trainingLogs.value.unshift({
-                        id: Date.now(),
-                        time: now,
-                        msg: `Agent ${activeAgent.value} reward: ${(Math.random() * 10).toFixed(2)} | Loss: 0.0024`
-                    });
-                    if (trainingLogs.value.length > 10) trainingLogs.value.pop();
-                };
+    // 1. 登录控制
+    function openLogin() { document.getElementById('login-overlay').classList.remove('hidden'); }
+    function closeLogin() { document.getElementById('login-overlay').classList.add('hidden'); }
 
-                onMounted(() => {
-                    setInterval(updateSimulation, 2000);
+    function selectLogin(role) {
+        currentRole = role;
+        document.getElementById('btn-user-select').className = role === 'user' ? "cursor-pointer group p-6 border-2 border-blue-600 bg-blue-50 rounded-2xl text-center transition" : "cursor-pointer group p-6 border-2 border-slate-100 rounded-2xl text-center hover:bg-slate-50 transition";
+        document.getElementById('btn-expert-select').className = role === 'expert' ? "cursor-pointer group p-6 border-2 border-blue-600 bg-blue-50 rounded-2xl text-center transition" : "cursor-pointer group p-6 border-2 border-slate-100 rounded-2xl text-center hover:bg-slate-50 transition";
+    }
 
-                    // 初始化图表 [cite: 43]
-                    const ctx = document.getElementById('rewardChart').getContext('2d');
-                    new Chart(ctx, {
-                        type: 'line',
-                        data: {
-                            labels: Array.from({length: 20}, (_, i) => i),
-                            datasets: [{
-                                label: 'Mean Reward',
-                                data: Array.from({length: 20}, () => Math.random() * 50 + 50),
-                                borderColor: '#3b82f6',
-                                tension: 0.4,
-                                borderWidth: 2,
-                                pointRadius: 0
-                            }]
-                        },
-                        options: {
-                            plugins: { legend: { display: false } },
-                            scales: {
-                                y: { display: false },
-                                x: { display: false }
-                            }
-                        }
-                    });
-                });
+    function executeLogin() {
+        closeLogin();
+        document.getElementById('view-welcome').classList.add('hidden');
+        document.getElementById('sidebar').classList.remove('hidden');
+        document.getElementById('dynamic-content').classList.remove('hidden');
+        document.getElementById('main-action-btn').innerText = "退出系统";
+        document.getElementById('status-tag').classList.remove('hidden');
+        
+        if(currentRole === 'user') {
+            document.getElementById('profile-name').innerText = "某城商行资管部";
+            document.getElementById('profile-role').innerText = "PRO 企业端";
+            document.getElementById('status-tag').innerText = "企业/银行模式";
+            renderUserSidebar();
+            loadView('dashboard');
+        } else {
+            document.getElementById('profile-name').innerText = "张德海 教授";
+            document.getElementById('profile-role').innerText = "资深风险专家";
+            document.getElementById('status-tag').innerText = "专家工作模式";
+            renderExpertSidebar();
+            loadView('expertTasks');
+        }
+    }
 
-                return {
-                    stateVector,
-                    hackerAction,
-                    regulatorAction,
-                    publicAction,
-                    competitorAction,
-                    activeAgent,
-                    trainingLogs
-                };
+    // 2. 侧边栏逻辑
+    function renderUserSidebar() {
+        const menu = [
+            { id: 'dashboard', icon: '📊', label: '工作台首页' },
+            { id: 'assess', icon: '🚀', label: '资产评估发起' },
+            { id: 'reports', icon: '📑', label: '报告中心' },
+            { id: 'mall', icon: '🛍️', label: '增值服务商城' },
+            { id: 'settings', icon: '⚙️', label: '账户与合规' }
+        ];
+        injectMenu(menu);
+    }
+
+    function renderExpertSidebar() {
+        const menu = [
+            { id: 'expertTasks', icon: '📥', label: '待审核任务' },
+            { id: 'expertHistory', icon: '✅', label: '已完成审核' },
+            { id: 'earnings', icon: '💰', label: '收益明细' }
+        ];
+        injectMenu(menu);
+    }
+
+    function injectMenu(items) {
+        const container = document.getElementById('sidebar-content');
+        container.innerHTML = '';
+        items.forEach((item, idx) => {
+            const div = document.createElement('div');
+            div.className = `sidebar-item flex items-center space-x-3 p-4 rounded-xl cursor-pointer ${idx===0?'sidebar-active':''}`;
+            div.innerHTML = `<span>${item.icon}</span><span class="font-bold text-sm">${item.label}</span>`;
+            div.onclick = () => {
+                document.querySelectorAll('.sidebar-item').forEach(e => e.classList.remove('sidebar-active'));
+                div.classList.add('sidebar-active');
+                loadView(item.id);
+            };
+            container.appendChild(div);
+        });
+    }
+
+    // 3. 动态内容加载器 (扩展性极强)
+    function loadView(viewId) {
+        const container = document.getElementById('dynamic-content');
+        container.innerHTML = ''; // 清空
+
+        if(viewId === 'dashboard') {
+            container.innerHTML = `
+                <div class="mb-10">
+                    <h2 class="text-3xl font-black text-slate-800">下午好，您的资产仪表盘</h2>
+                    <p class="text-slate-400 text-sm mt-1">当前有 2 个资产正在由 AI 专家进行交叉审核中</p>
+                </div>
+                <div class="grid grid-cols-3 gap-8 mb-10">
+                    <div class="bg-white p-8 rounded-3xl shadow-sm border border-slate-100">
+                        <p class="text-[10px] text-slate-400 font-bold uppercase">本月评估总值 (期望)</p>
+                        <p class="text-3xl font-black text-slate-800 mt-1">￥1,420.50万</p>
+                    </div>
+                    <div class="bg-white p-8 rounded-3xl shadow-sm border border-slate-100">
+                        <p class="text-[10px] text-blue-600 font-bold uppercase">已锁定极限生存值</p>
+                        <p class="text-3xl font-black text-blue-600 mt-1">￥480.00万</p>
+                    </div>
+                    <div class="bg-white p-8 rounded-3xl shadow-sm border border-slate-100">
+                        <p class="text-[10px] text-green-500 font-bold uppercase">合规性一致率</p>
+                        <p class="text-3xl font-black text-green-500 mt-1">94.8%</p>
+                    </div>
+                </div>
+                <div class="bg-white p-8 rounded-3xl border border-slate-100 shadow-sm">
+                    <div class="flex justify-between items-center mb-8">
+                        <h3 class="font-bold">近期评估任务</h3>
+                        <button onclick="loadView('assess')" class="text-blue-600 font-bold text-sm">发起新评估 +</button>
+                    </div>
+                    <table class="w-full text-left text-sm">
+                        <tr class="text-slate-400 border-b"><th class="pb-4">资产包</th><th class="pb-4">烈度 γ</th><th class="pb-4">状态</th><th class="pb-4">操作</th></tr>
+                        <tr class="border-b hover:bg-slate-50">
+                            <td class="py-5 font-bold">零售消费行为数据集-2026</td>
+                            <td>1.8 (高)</td>
+                            <td><span class="px-2 py-1 bg-green-100 text-green-700 rounded-md text-[10px] font-bold italic">评估完成</span></td>
+                            <td><button onclick="renderFullReport()" class="text-blue-600 font-bold">查看三维报告</button></td>
+                        </tr>
+                    </table>
+                </div>
+            `;
+        }
+
+        if(viewId === 'assess') {
+            container.innerHTML = `
+                <div class="max-w-3xl mx-auto py-10 text-center">
+                    <div class="w-20 h-20 bg-blue-100 text-blue-600 rounded-3xl flex items-center justify-center text-3xl mx-auto mb-6">🚀</div>
+                    <h2 class="text-3xl font-black mb-4">准备好开启新的估值了吗？</h2>
+                    <p class="text-slate-500 mb-10">数钥智评将采用对话式采集，协助您完成资产合规录入。</p>
+                    <div class="bg-white p-10 rounded-3xl border-4 border-dashed border-blue-100 hover:border-blue-400 transition cursor-pointer" onclick="toggleAi(true)">
+                        <p class="text-xl font-bold text-blue-600">点击唤起 AI 助手开始</p>
+                        <p class="text-xs text-slate-400 mt-2">支持 PDF / Excel / 文案识别</p>
+                    </div>
+                </div>
+            `;
+            setTimeout(() => toggleAi(true), 400);
+        }
+
+        if(viewId === 'expertTasks') {
+            container.innerHTML = `
+                <h2 class="text-3xl font-black text-slate-800 mb-8">专家审核工作台</h2>
+                <div class="bg-white p-8 rounded-3xl border-2 border-orange-100">
+                    <div class="flex justify-between items-center">
+                        <div>
+                            <span class="px-2 py-1 bg-orange-100 text-orange-600 rounded text-[10px] font-bold mb-2 inline-block">加急 · 剩余 4h</span>
+                            <h4 class="text-xl font-bold">某零售金融数据集极限值修正案</h4>
+                            <p class="text-sm text-slate-400 mt-1">申请单位：大连商业银行 | AI 预审得分：88</p>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-2xl font-black text-slate-800">￥850.00</p>
+                            <p class="text-[10px] text-slate-400">预计审核报酬</p>
+                            <button class="mt-4 bg-slate-900 text-white px-6 py-2 rounded-xl text-xs font-bold">开始人工复核</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+        
+        if(viewId === 'mall') {
+            container.innerHTML = `
+                <h2 class="text-2xl font-black mb-8">增值服务生态</h2>
+                <div class="grid grid-cols-2 gap-6">
+                    <div class="bg-white p-8 rounded-3xl card-shadow border hover:border-blue-500 transition">
+                        <div class="text-3xl mb-4">🛡️</div>
+                        <h4 class="font-bold">数据资产评估保险</h4>
+                        <p class="text-xs text-slate-400 mt-2 mb-6">联手众安保险，为评估结果提供风险担保。</p>
+                        <button class="w-full py-3 bg-blue-50 text-blue-600 rounded-xl font-bold text-xs">查看详情</button>
+                    </div>
+                    <div class="bg-white p-8 rounded-3xl card-shadow border hover:border-blue-500 transition">
+                        <div class="text-3xl mb-4">👨‍🏫</div>
+                        <h4 class="font-bold">专家 1-on-1 连线</h4>
+                        <p class="text-xs text-slate-400 mt-2 mb-6">针对复杂资产包，邀请行业领军人物深度拆解。</p>
+                        <button class="w-full py-3 bg-blue-50 text-blue-600 rounded-xl font-bold text-xs">立即预约</button>
+                    </div>
+                </div>
+            `;
+        }
+    }
+
+    // 4. 报告详情页 (核心逻辑：三维估值)
+    function renderFullReport() {
+        const container = document.getElementById('dynamic-content');
+        container.innerHTML = `
+            <div class="flex justify-between items-end mb-8">
+                <div>
+                    <button onclick="loadView('dashboard')" class="text-blue-600 font-bold text-xs mb-2 block">← 返回仪表盘</button>
+                    <h2 class="text-4xl font-black text-slate-900">资产价值报告：零售消费包</h2>
+                </div>
+                <button class="bg-slate-900 text-white px-6 py-2 rounded-xl font-bold text-sm">下载 PDF 官方报告</button>
+            </div>
+            
+            <div class="grid grid-cols-12 gap-8">
+                <div class="col-span-8 bg-white p-10 rounded-[40px] shadow-sm border">
+                    <h3 class="font-bold mb-10 flex items-center">📊 三维估值模型分布图</h3>
+                    <div class="h-[350px]"><canvas id="reportChart"></canvas></div>
+                    <div class="grid grid-cols-3 gap-6 mt-10">
+                        <div class="p-6 bg-green-50 rounded-3xl text-center border border-green-100">
+                            <p class="text-[10px] font-bold text-green-600">乐观价值 (Max)</p>
+                            <p class="text-2xl font-black text-green-700">￥1,280.00万</p>
+                        </div>
+                        <div class="p-6 bg-blue-50 rounded-3xl text-center border border-blue-100">
+                            <p class="text-[10px] font-bold text-blue-600">期望价值 (Exp)</p>
+                            <p class="text-2xl font-black text-blue-700">￥950.40万</p>
+                        </div>
+                        <div class="p-6 bg-orange-50 rounded-3xl text-center border border-orange-100">
+                            <p class="text-[10px] font-bold text-orange-600">极限生存值 (Min)</p>
+                            <p class="text-2xl font-black text-orange-700 font-mono">￥420.00万</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-span-4 space-y-6">
+                    <div class="bg-slate-900 text-white p-8 rounded-[40px]">
+                        <h4 class="font-bold mb-4">AI 专家共识意见</h4>
+                        <div class="space-y-4">
+                            <div class="flex items-start space-x-3">
+                                <span class="text-green-400">●</span>
+                                <p class="text-xs opacity-70 italic">“风控智能体：违约概率模型已在 γ=1.8 环境下完成压力测试，通过。”</p>
+                            </div>
+                            <div class="flex items-start space-x-3 border-t border-white/10 pt-4">
+                                <span class="text-amber-400">●</span>
+                                <p class="text-xs opacity-70 italic">“合规智能体：资产持有证明文件需在 48h 内补充原件扫描件，目前评级：B+。”</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-blue-600 text-white p-8 rounded-[40px] shadow-xl shadow-blue-200">
+                        <h4 class="font-bold mb-2">需要专家人工加持？</h4>
+                        <p class="text-xs opacity-80 mb-6">若对此评估有疑义，可申请“行业领军专家”进行二次修正。</p>
+                        <button onclick="loadView('mall')" class="w-full py-4 bg-white text-blue-600 rounded-2xl font-bold text-sm">申请专家介入</button>
+                    </div>
+                </div>
+            </div>
+        `;
+        initReportChart();
+    }
+
+    // 5. AI 对话助手逻辑 (重点实现)
+    function toggleAi(show) {
+        document.getElementById('ai-assistant').classList.toggle('hidden', !show);
+    }
+
+    function handleFileSubmit(e) {
+        const file = e.target.files[0];
+        if(file) {
+            sendUserMessage(`📎 上传资产文件: ${file.name}`, 1);
+            setTimeout(() => {
+                sendAiMessage("✅ 文件解析成功！识别到该资产为“电商零售流水”。为了进一步计算，请问该资产的**更新频率**是？");
+                updateAiStep(2);
+                updateAiOptions(["实时同步", "按月更新", "离线存量"]);
+            }, 1000);
+        }
+    }
+
+    function handleTextSubmit() {
+        const input = document.getElementById('chat-input');
+        if(input.value) {
+            sendUserMessage(input.value, 1);
+            input.value = '';
+            setTimeout(() => {
+                sendAiMessage("了解。正在调用‘金融专家智能体’进行初步测算...");
+            }, 800);
+        }
+    }
+
+    function sendAiMessage(msg) {
+        const win = document.getElementById('chat-window');
+        const div = document.createElement('div');
+        div.className = "flex items-start space-x-2 animate__animated animate__fadeInUp";
+        div.innerHTML = `<div class="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-xs">A</div>
+                         <div class="chat-bubble-ai p-4 text-sm text-slate-700 leading-relaxed shadow-sm max-w-[85%]">${msg}</div>`;
+        win.appendChild(div);
+        win.scrollTop = win.scrollHeight;
+    }
+
+    function sendUserMessage(msg, s) {
+        const win = document.getElementById('chat-window');
+        const div = document.createElement('div');
+        div.className = "flex justify-end animate__animated animate__fadeInUp";
+        div.innerHTML = `<div class="chat-bubble-user p-4 text-sm shadow-md max-w-[85%]">${msg}</div>`;
+        win.appendChild(div);
+        win.scrollTop = win.scrollHeight;
+        if(step + s >= 5) {
+            setTimeout(() => {
+                sendAiMessage("🎉 信息采集已完成！模型正在构建中。您现在可以前往【报告中心】查看初步评估结果。");
+                updateAiStep(5);
+                setTimeout(() => { toggleAi(false); renderFullReport(); }, 2000);
+            }, 1000);
+        }
+    }
+
+    function updateAiStep(s) {
+        step = s;
+        document.getElementById('chat-progress-num').innerText = `${s}/5`;
+        document.getElementById('chat-progress-bar').style.width = `${(s/5)*100}%`;
+    }
+
+    function updateAiOptions(opts) {
+        const optBox = document.getElementById('ai-options');
+        optBox.innerHTML = '';
+        opts.forEach(o => {
+            const b = document.createElement('button');
+            b.className = "px-4 py-2 bg-blue-50 text-blue-600 rounded-xl text-xs font-bold hover:bg-blue-600 hover:text-white transition shadow-sm";
+            b.innerText = o;
+            b.onclick = () => {
+                sendUserMessage(o, 1);
+                sendAiMessage(`已确认更新频率为：${o}。最后，该资产是否有来自第三方的审计报告？`);
+                updateAiStep(step + 1);
+                updateAiOptions(["有，已包含在附件", "无，需AI预审"]);
+            };
+            optBox.appendChild(b);
+        });
+    }
+
+    function initReportChart() {
+        const ctx = document.getElementById('reportChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: ['极限值', '期望值', '乐观值'],
+                datasets: [{
+                    data: [420, 950.4, 1280],
+                    backgroundColor: ['#f97316', '#2563eb', '#22c55e'],
+                    borderRadius: 20,
+                    barThickness: 60
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: { beginAtZero: true, grid: { color: '#f1f5f9' }, border: { display: false } },
+                    x: { grid: { display: false }, border: { display: false } }
+                }
             }
-        }).mount('#app');
-    </script>
+        });
+    }
 
-    <style>
-        .animate-spin-slow {
-            animation: spin 12s linear infinite;
-        }
-        @keyframes spin {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
-        }
-    </style>
+</script>
+
 </body>
 </html>
